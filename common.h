@@ -3,7 +3,9 @@
 
 #include <string>
 #include <stdexcept>
-#include <cstdlib>
+#include <cctype>
+#include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -15,5 +17,18 @@ typedef struct {
     bool ip6 = false;
     int verbosity = -1;
 } Options;
+
+typedef struct  {
+    string host;
+    string port;
+    string target;
+    bool use_tls;  
+} ParsedUrl;
+
+Options parse_args(int argc, char *argv[]);
+ParsedUrl parse_url(const std::string &url);
+
+string build_request(const ParsedUrl &url, const Options &opt);
+
 
 #endif // COMMON_H
