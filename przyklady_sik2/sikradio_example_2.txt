@@ -1,2 +1,0 @@
-$ ./sikradio -u http://an04.cdn.eurozet.pl/ant-web.mp3 -mq | play -q -t mp3 -
-StreamTitle='';
