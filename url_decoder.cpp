@@ -1,3 +1,10 @@
+/*
+ * URL parsing utilities for the radio client.
+ *
+ * Validates and parses HTTP/HTTPS URLs into protocol, host, port, and target
+ * components, including support for IPv6 addresses and explicit port numbers.
+ */
+
 #include "common.h"
 
 static bool is_digits_only(const std::string &s)
@@ -18,6 +25,8 @@ static bool is_digits_only(const std::string &s)
     return true;
 }
 
+// Parses a URL string into its components, with validation. 
+// Returns a ParsedUrl struct. Throws invalid_argument on failure.
 ParsedUrl parse_url(const string &url)
 {
     ParsedUrl result;
@@ -34,7 +43,6 @@ ParsedUrl parse_url(const string &url)
 
     string rest = "";
 
-    // Check for http:// or https:// prefix
     if (url.rfind("http://", 0) == 0)
     {
         result.use_tls = false;
@@ -55,8 +63,8 @@ ParsedUrl parse_url(const string &url)
         throw std::invalid_argument("Missing host");
     }
 
-    // Split authority and path
     size_t slash_pos = rest.find('/');
+
     // Authority = host:port
     string authority = (slash_pos == std::string::npos) ? rest : rest.substr(0, slash_pos);
     string path_and_query = (slash_pos == std::string::npos) ? "/" : rest.substr(slash_pos);
@@ -86,7 +94,7 @@ ParsedUrl parse_url(const string &url)
         // Check for optional port after IPv6 address
         if (closing_bracket + 1 == authority.size())
         {
-            result.port = result.use_tls ? "443" : "80";
+            result.port = result.use_tls ? HTTPS_PORT : HTTP_PORT;
         }
         else
         {
@@ -111,7 +119,7 @@ ParsedUrl parse_url(const string &url)
         if (colon_pos == std::string::npos)
         {
             result.host = authority;
-            result.port = result.use_tls ? "443" : "80";
+            result.port = result.use_tls ? HTTPS_PORT : HTTP_PORT;
         }
         else
         {
@@ -146,7 +154,7 @@ ParsedUrl parse_url(const string &url)
 
     // Validate port number range
     int port_num = std::stoi(result.port);
-    if (port_num < 1 || port_num > 65535)
+    if (port_num < MIN_PORT_NUMBER || port_num > MAX_PORT_NUMBER)
     {
         throw std::invalid_argument("Port out of range");
     }
