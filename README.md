@@ -44,7 +44,6 @@ If an option is repeated, the last value takes precedence.
 - `1` – communication progress information
 - `2` – critical errors preventing further execution
 - `3` – non-critical errors
-- `4` – detailed debugging information
 
 ## Examples
 
