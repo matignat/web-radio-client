@@ -1,125 +1,144 @@
-# sikradio – Internet Radio Client
+# Internet Radio Client- sikradio
 
-## Overview
+A C++ implementation of an Internet radio client communicating with a remote server over **TCP** and supporting both **IPv4 and IPv6**.
 
-`sikradio` is a simple internet radio client implemented in C++, using TCP sockets over IPv4 and IPv6.
-
-It connects to HTTP or HTTPS streaming servers, follows HTTP redirects, and forwards the received audio stream unchanged to standard output, where it can be piped to an external player such as `play` or `mpv`.
-
-The client optionally requests and handles ICY metadata (for example current song titles) multiplexed into the audio stream and prints this textual information to standard error.
-
-## Building
-
-The program is intended to be built on Linux with a C++ compiler and OpenSSL libraries available.
-
-Makefile included
-
-## Usage
-
-The client is run with the following syntax:
-
-```bash
-sikradio -u url [-m] [-t timeout] [-4] [-6] [-v verbosity] [-q]
-```
-
-## Options
-
-- `-u url` – URL of the server and audio stream, required.
-- `-m` – request ICY metadata to be multiplexed with the audio stream.
-- `-t timeout` – timeout in milliseconds for receiving data, range `100–100000`, default `5000`.
-- `-4` – force IPv4 only.
-- `-6` – force IPv6 only.
-- `-v verbosity` – diagnostic output level, range `0–4`, default `2`.
-- `-q` – shortcut for `-v0`.
-
-Options may be provided in any order and may also be grouped, for example `-m46`.
-
-If both `-4` and `-6` are given, or neither is given, the client uses the address family of the first address returned by `getaddrinfo`.
-
-If an option is repeated, the last value takes precedence.
-
-## Verbosity levels
-
-- `0` – no additional diagnostic output
-- `1` – communication progress information
-- `2` – critical errors preventing further execution
-- `3` – non-critical errors
-
-## Examples
-
-Basic usage with `play`:
-
-```bash
-sikradio -u http://stream.radiobaobab.pl:8000/radiobaobab.mp3 \
-  | play -q -t mp3 -
-```
-
-Requesting ICY metadata and setting a custom timeout:
-
-```bash
-sikradio -u https://stream.nowyswiat.online/mp3 -m -t 3500 \
-  | play -q -t mp3 -
-```
-
-Using `mpv` instead of `play`:
-
-```bash
-sikradio -u http://stream3.polskieradio.pl:8904 \
-  | mpv --really-quiet -
-```
+The project implements the communication protocol from scratch using the **socket API**, handles continuous audio streaming, reconnection, multiplexed text data, configurable timeouts, and multiple runtime options.
 
 ## Features
 
-- Supports both HTTP and HTTPS streams
-- Supports IPv4 and IPv6 connections
-- Parses and validates HTTP/HTTPS URLs
-- Follows HTTP redirects
-- Detects redirect loops
-- Extracts and forwards cookies during redirects
-- Streams audio data directly to standard output
-- Supports ICY metadata streaming
-- Prints metadata to standard error
-- Supports timeout-based reconnecting
-- Allows graceful shutdown when the user types `quit`
+* TCP-based communication
+* IPv4 and IPv6 support
+* Automatic IP version selection
+* Manual IPv4 / IPv6 selection
+* Continuous audio stream reception
+* Transparent forwarding of received audio data to standard output
+* Optional multiplexing of text information
+* Automatic reconnection after a timeout
+* Configurable connection timeout
+* Graceful connection termination
+* Interactive `quit` command
+* Configurable diagnostic output
+* Robust command-line argument parsing
+* Support for both short and grouped parameters
 
-## Program behavior
+## Usage
 
-The client does not decode or interpret the audio stream. It writes the received audio data exactly as received to standard output.
+The client is launched using:
 
-When metadata mode is enabled with `-m` and the server provides the `icy-metaint` header, the client reads metadata blocks from the stream and writes them to standard error.
+```bash
+./sikradio -u <url>
+```
 
-The client monitors both the socket and standard input. If the user types `quit` and presses Enter, the program closes the connection and exits normally.
+### Available options
 
-If no data is received within the configured timeout, the client closes the connection and retries automatically.
+| Option         | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| `-u url`       | Server and audio stream identifier                             |
+| `-m`           | Request multiplexing of text information with the audio stream |
+| `-t timeout`   | Connection timeout in milliseconds                             |
+| `-4`           | Force IPv4                                                     |
+| `-6`           | Force IPv6                                                     |
+| `-v verbosity` | Set diagnostic output level (`0–4`)                            |
+| `-q`           | Equivalent to `-v0`                                            |
 
-## Exit status
+For example:
 
-- `0` – normal termination, for example when the server closes the connection or the user types `quit`
-- `1` – invalid arguments or a critical runtime error
+```bash
+./sikradio -u <url> -m -t 5000 -4
+```
 
-## Implementation notes
+The client also supports grouped flags, for example:
 
-The project is implemented in C++ using POSIX sockets and `poll()` for communication, timeout handling, and quit detection.
+```bash
+./sikradio -m46
+```
 
-HTTPS support is implemented using OpenSSL (`libssl` and `libcrypto`).
+## Audio Playback
 
-The client includes:
-- command-line argument parsing and validation
-- URL parsing with support for IPv6 and explicit ports
-- HTTP response parsing
-- header lookup and redirect handling
-- cookie extraction
-- plain TCP audio streaming
-- TLS-protected audio streaming
-- ICY metadata handling for both plain and TLS connections
+The client does not decode the received audio stream itself. Instead, the raw stream is written directly to standard output and can be piped to an external audio player.
 
-## Limitations
+For example:
 
-- Only `http://` and `https://` URLs are supported
-- Only basic redirect formats are supported
-- Audio data is forwarded unchanged and is not decoded by the client itself
-- Metadata support depends on server-side ICY support
+```bash
+./sikradio -u <url> | play -q -t mp3 -
+```
 
-## Summary
+Alternatively, `mpv` can be used:
 
-`sikradio` is a lightweight command-line internet radio client designed for streaming audio over HTTP and HTTPS, with optional ICY metadata support, redirect handling, timeout recovery, and compatibility with external audio players.
+```bash
+./sikradio -u <url> | mpv --really-quiet -
+```
+
+This approach allows the client to focus on network communication and stream handling while leaving audio decoding and playback to a dedicated external program.
+
+## Diagnostic Output
+
+The verbosity level controls the amount of information printed to standard error:
+
+| Level | Information                                     |
+| ----- | ----------------------------------------------- |
+| `0`   | No additional diagnostic information            |
+| `1`   | Information about communication with the server |
+| `2`   | Critical errors preventing further operation    |
+| `3`   | Non-critical system or library errors           |
+
+The `-q` option is a shortcut for `-v0`.
+
+## Connection Handling
+
+The client supports several connection-related scenarios:
+
+* If the server closes the connection, all received data is preserved and the client exits successfully.
+* If the connection times out, the client disconnects and attempts to reconnect.
+* If the user enters `quit`, the client closes the connection, outputs all received data, and terminates successfully.
+* Critical errors result in a non-zero exit status.
+* Invalid command-line arguments are reported and result in a non-zero exit status.
+
+## Implementation
+
+The project was implemented in **C++** using the system **socket API**.
+
+The implementation focuses on:
+
+* TCP socket communication
+* Address resolution with `getaddrinfo`
+* IPv4 / IPv6 compatibility
+* Connection management
+* Receiving and forwarding continuous data streams
+* Timeout handling
+* Reconnection logic
+* Command-line argument parsing
+* Error handling
+* Multiplexed data processing
+
+No external networking libraries are used for the communication layer.
+
+## Building
+
+The project includes a `Makefile`.
+
+Build the client with:
+
+```bash
+make
+```
+
+This produces the executable:
+
+```text
+sikradio
+```
+
+To remove generated build files:
+
+```bash
+make clean
+```
+
+## Project Context
+
+This project was developed as part of a university networking assignment focused on practical network programming and socket-based communication.
+
+The assignment required reverse-engineering the communication protocol from provided examples and implementing a reliable streaming client capable of operating in both IPv4 and IPv6 environments.
+
+The implementation was written from scratch in **C++**, with particular emphasis on correct stream handling, robust error management, and uninterrupted audio playback.
