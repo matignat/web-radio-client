@@ -1,4 +1,4 @@
-# Internet Radio Client- sikradio
+# Internet Radio Client - sikradio
 
 A C++ implementation of an Internet radio client communicating with a remote server over **TCP** and supporting both **IPv4 and IPv6**.
 
